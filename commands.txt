@@ -1,0 +1,5 @@
+# Command to run LabelImg (image labeling for ai's)
+pip install LabelImg
+python -m labelImg.labelImg
+
+(otherwise python/terminal will freak out bc it technically is a package)

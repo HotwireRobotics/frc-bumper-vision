@@ -1,0 +1,6 @@
+ultralytics>=8.0.0
+opencv-python
+requests
+beautifulsoup4
+duckduckgo-search     # optional, if you plan to use DDG for scraping
+lxml                  # faster HTML parsing for BeautifulSoup

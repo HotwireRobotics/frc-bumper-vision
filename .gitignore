@@ -1,0 +1,22 @@
+# Ignore Python virtual environments
+.venv/
+
+# Ignore VSCode/Cursor settings
+.vscode/
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Data files or logs
+*.log
+*.tmp
+
+# System files
+.DS_Store
+Thumbs.db
+
+# stuff we dont want online lol
+data
+models
