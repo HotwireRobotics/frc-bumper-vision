@@ -22,7 +22,7 @@ pip install -r requirements.lock
 ## 📌 Status
 
 * [x] Virtual environment + test script ready
-* [ ] Data collection and labeling
+* [x] Data collection and labeling
 * [ ] YOLO training pipeline
 * [ ] Full FRC integration
 
