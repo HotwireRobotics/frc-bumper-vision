@@ -24,7 +24,7 @@ logs/
 *.log
 
 # Data output folders (avoid committing large datasets)
-data/raw/
+data/
 temp/
 
 # OS files

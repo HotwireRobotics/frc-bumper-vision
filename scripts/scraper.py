@@ -317,7 +317,8 @@ def main():
             video_id = url.split("v=")[-1].split("&")[0]
             downloaded_path = download_video_clip(url, video_id, temp_dir)
 
-            if not downloaded_path or not downloaded_path.exists():
+            if downloaded_path is None or not downloaded_path.exists():
+
                 print(f"⚠️ Skipping video due to download failure.")
                 continue
 
