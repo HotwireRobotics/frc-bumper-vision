@@ -177,57 +177,112 @@ def extract_and_filter_frames(video_path):
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     print(f"🎮 Total frames in video: {total_frames}")
 
-    frame_idx = 0
     saved_negatives = 0
     saved_this_video = 0
 
+    BATCH_SIZE = 8            # Tune this to your GPU memory
+    SAVE_BATCH_SIZE = 10      # How many frames to save at once to disk
+
+    frames_batch = []
+    frame_indices = []
+    save_buffer = []
+
     with tqdm(total=total_frames, desc="Processing Frames", unit="frame") as pbar:
         frame_idx = 0
-        while frame_idx < total_frames:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+        while True:
             ret, frame = cap.read()
             if not ret:
                 break
-            # process frame
-            frame_idx += FRAME_SKIP
 
+            # Collect every frame (or skip fewer)
+            # Adjust FRAME_SKIP here or remove for no skipping
+            if frame_idx % 3 == 0:  # Change 1 to your preferred skip count (e.g., 2 or 3)
+                frames_batch.append(frame)
+                frame_indices.append(frame_idx)
 
-            try:
-                results = model.predict(frame, verbose=False)
-                detections = results[0].boxes
-            except Exception as e:
-                print(f"⚠️ AI prediction failed on frame {frame_idx}: {e}")
-                logging.error(f"AI prediction failed on frame {frame_idx}: {e}")
-                continue
+            if len(frames_batch) == BATCH_SIZE or (frame_idx == total_frames - 1):
+                try:
+                    results = model.predict(frames_batch, verbose=False)
+                except Exception as e:
+                    for fi in frame_indices:
+                        print(f"⚠️ AI prediction failed on frame {fi}: {e}")
+                        logging.error(f"AI prediction failed on frame {fi}: {e}")
+                    frames_batch.clear()
+                    frame_indices.clear()
+                    pbar.update(len(frames_batch))
+                    continue
 
-            has_bumper = False
-            if detections is not None and len(detections) > 0:
-                has_bumper = any(det.conf >= CONFIDENCE_THRESHOLD for det in detections)
+                for i, result in enumerate(results):
+                    detections = result.boxes
+                    has_bumper = False
+                    if detections is not None and len(detections) > 0:
+                        has_bumper = any(det.conf >= CONFIDENCE_THRESHOLD for det in detections)
 
-            save = False
-            if has_bumper:
-                save = True
-            elif saved_negatives % SAVE_NEGATIVE_EVERY_N == 0 and saved_negatives < MAX_NEGATIVE_PER_VIDEO:
-                save = True
-                saved_negatives += 1
+                    save = False
+                    if has_bumper:
+                        save = True
+                    elif saved_negatives % SAVE_NEGATIVE_EVERY_N == 0 and saved_negatives < MAX_NEGATIVE_PER_VIDEO:
+                        save = True
+                        saved_negatives += 1
 
-            if save:
-                if frame_counter >= MAX_FRAMES:
-                    print(f"⚠️ Frame counter limit reached ({MAX_FRAMES}). Stopping save.")
-                    break
+                    if save:
+                        if frame_counter >= MAX_FRAMES:
+                            print(f"⚠️ Frame counter limit reached ({MAX_FRAMES}). Stopping save.")
+                            cap.release()
+                            # Save any buffered frames
+                            for f, idx in save_buffer:
+                                filename = f"frame_{frame_counter:05}.png"
+                                filepath = OUTPUT_DIR / filename
+                                cv2.imwrite(str(filepath), f)
+                                frame_counter += 1
+                                save_frame_counter(frame_counter)
+                                saved_this_video += 1
+                            return saved_this_video
 
-                if not has_enough_space():
-                    print(f"⚠️ Low disk space. Stopping frame saving.")
-                    break
+                        if not has_enough_space():
+                            print(f"⚠️ Low disk space. Stopping frame saving.")
+                            cap.release()
+                            # Save buffered frames
+                            for f, idx in save_buffer:
+                                filename = f"frame_{frame_counter:05}.png"
+                                filepath = OUTPUT_DIR / filename
+                                cv2.imwrite(str(filepath), f)
+                                frame_counter += 1
+                                save_frame_counter(frame_counter)
+                                saved_this_video += 1
+                            return saved_this_video
 
-                filename = f"frame_{frame_counter:05}.png"
-                filepath = OUTPUT_DIR / filename
-                cv2.imwrite(str(filepath), frame)
-                frame_counter += 1
-                save_frame_counter(frame_counter)
-                saved_this_video += 1
+                        save_buffer.append((frames_batch[i], frame_indices[i]))
+
+                        if len(save_buffer) >= SAVE_BATCH_SIZE:
+                            # Write buffered frames to disk in a batch
+                            for f, idx in save_buffer:
+                                filename = f"frame_{frame_counter:05}.png"
+                                filepath = OUTPUT_DIR / filename
+                                cv2.imwrite(str(filepath), f)
+                                frame_counter += 1
+                                save_frame_counter(frame_counter)
+                                saved_this_video += 1
+                            save_buffer.clear()
+
+                frames_batch.clear()
+                frame_indices.clear()
+
+            frame_idx += 1
+            pbar.update(1)
+
+        # Save any leftover buffered frames
+        for f, idx in save_buffer:
+            filename = f"frame_{frame_counter:05}.png"
+            filepath = OUTPUT_DIR / filename
+            cv2.imwrite(str(filepath), f)
+            frame_counter += 1
+            save_frame_counter(frame_counter)
+            saved_this_video += 1
+        save_buffer.clear()
 
     cap.release()
+
     try:
         video_path.unlink()
     except Exception as e:
@@ -236,6 +291,7 @@ def extract_and_filter_frames(video_path):
 
     print(f"✔️ Done processing video. Saved {saved_this_video} new frames.")
     return saved_this_video
+
 
 # --- Main Loop ---
 def main():
