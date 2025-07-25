@@ -1,0 +1,6 @@
+names:
+- class_0
+nc: 1
+test: C:\Users\Zanea\OneDrive\Documents\frc_bumper_vision-greyscale\data\split\test\images
+train: C:\Users\Zanea\OneDrive\Documents\frc_bumper_vision-greyscale\data\split\train\images
+val: C:\Users\Zanea\OneDrive\Documents\frc_bumper_vision-greyscale\data\split\val\images
