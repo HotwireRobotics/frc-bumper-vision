@@ -26,6 +26,8 @@ logs/
 # Data output folders (avoid committing large datasets)
 data/
 temp/
+other_data/
+models/
 
 # OS files
 .DS_Store
@@ -46,3 +48,5 @@ Thumbs.db
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+config/email_config.json
+config/train_config.json
